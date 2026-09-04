@@ -1,0 +1,46 @@
+PROGRAM=TPS-NS1-CLEANROOM-MASTER-FOUNDATION
+VERSION=2.2.0
+SHA256=1520afb3a5df9919c3fcac20be6fa882e68a9790d7ca8f822b114e98df65eb08
+
+CURRENT_STATE_TARGET
+- Host/FQDN: ns1.tpsolutions.com.br
+- GCP instance: tpsolutionshost01
+- GCP private: 10.142.0.2
+- GCP public: 35.231.174.46
+- MediaMTX: ACTIVE after external SCRIPT 02B
+- MediaMTX API: 9 configured legacy-name paths, all ready=false/online=false/source=null/readers=0
+- FFmpeg: 0
+- Nginx: active
+- BIND: active
+
+REASON_FOR_V2_2
+v2.1.0 was superseded before execution because current state changed after SCRIPT 02B and review found two rollback defects:
+1. deprecated repository directories were moved before LAB without transactional restoration;
+2. fatal() used exit 1, therefore explicit FATAL after mutation did not guarantee the ERR trap rollback.
+v2.2.0 fixes both and treats current legacy 9-path set as an exact admissible migration state.
+
+BUILD_VALIDATION
+BASH_N=PASS
+PYYAML=PASS
+CANDIDATE_YAML_PARSE=PASS
+EXACT_FINAL_9_NAMES=PASS
+LEGACY_AND_FINAL_NAME_SETS_DISJOINT=PASS
+STATIC_SCAN_RM_RF=PASS
+STATIC_SCAN_SYSTEMCTL_RESTART=PASS
+STATIC_SCAN_PACKAGE_MUTATION=PASS
+STATIC_SCAN_FIREWALL_MUTATION=PASS
+ROLLBACK_MEDIAMTX_RESTORE_AND_VERIFY=PASS_DESIGN
+ROLLBACK_DEPRECATED_REPOSITORY_DIRS=PASS_DESIGN
+HOT_RELOAD_REQUIRES_PID_UNCHANGED=PASS_DESIGN
+HOT_RELOAD_REQUIRES_NRESTARTS_UNCHANGED=PASS_DESIGN
+LAB_REQUIRES_FINAL_9_PATHS=PASS_DESIGN
+LAB_REQUIRES_RTMP_READY_AND_BYTES=PASS_DESIGN
+LAB_REQUIRES_HLS_MANIFEST=PASS_DESIGN
+LAB_REQUIRES_FFPROBE_AUDIO_DECODE=PASS_DESIGN
+
+SHELLCHECK
+UNAVAILABLE_IN_BUILD_ENVIRONMENT.
+Execution is fail-closed and requires ShellCheck on NS1 before any mutation.
+
+PRODUCTION_RULE
+Do not execute v2.0.0 or v2.1.0 after SCRIPT 02B. v2.2.0 is the first runner aligned with the observed active MediaMTX legacy-9 state.
