@@ -8,18 +8,40 @@
 - GCP private: `10.142.0.2`
 - GCP public: `35.231.174.46`
 
-## Mudanças já executadas/informadas pelo operador
+## Mudanças executadas e comprovadas pelo operador
 
 - A árvore histórica `/srv/tpsmedia` foi isolada sob `/srv/tpsmedia-legacy-*`.
 - Uma nova árvore base `/srv/tpsmedia` foi criada.
-- Hostname foi corrigido para `ns1.tpsolutions.com.br`.
-- O operador informou padronização dos nomes das emissoras para a forma final sem `-main`.
+- O hostname foi corrigido para `ns1.tpsolutions.com.br`.
+- O SCRIPT 02B reescreveu a configuração do MediaMTX e executou `systemctl restart tps-mediamtx`.
+- Após o SCRIPT 02B, o MediaMTX ficou `active` e as portas RTMP/HLS/API ficaram em escuta.
 
-A execução externa/Grok é tratada como **estado informado**, não como certificação. O Runner Foundation v2.1.0 verifica e normaliza o estado antes de declarar PASS.
+## Estado exato pós-SCRIPT-02B
+
+- Nginx: `active`
+- BIND: `active`
+- MediaMTX: `active`
+- FFmpeg ativos: `0`
+- Porta RTMP 1935: escutando
+- Porta HLS 8888: escutando
+- Porta API 9997: escutando
+- Paths configurados na API: `9`
+- Paths READY: `0`
+- Paths ONLINE: `0`
+- Publishers/source: `0`
+- Readers: `0`
+- Bytes recebidos/enviados: `0`
+- HTTPS/443: ainda não certificado neste estado
+
+### Nomes transitórios ainda presentes no MediaMTX
+
+`radio-main`, `radio-pop`, `radio-rock`, `radio-classicas`, `radio-country`, `tvkids-main`, `tvteens-main`, `tvviva-main`, `tvmaisjovem-main`.
+
+Esses nomes são **estado legado transitório introduzido pelo SCRIPT 02B**, não autoridade final.
 
 ## Nomenclatura definitiva
 
-IDs internos/pastas/paths:
+IDs internos/pastas/paths finais:
 
 `radioprincipal`, `radiopop`, `radiorock`, `radioclassicas`, `radiocountry`, `tvkids`, `tvteens`, `tvviva`, `tvmaisjovem`.
 
@@ -28,28 +50,30 @@ Domínios:
 - infraestrutura/hosting: `tpsolutions.com.br`;
 - emissoras: `studiosatweb.com.br`.
 
-`radioprincipal` publica como `radio.studiosatweb.com.br`; os demais usam o ID como label público, por exemplo `radiorock.studiosatweb.com.br` e `tvkids.studiosatweb.com.br`.
+`radioprincipal` publica como `radio.studiosatweb.com.br`; os demais usam o ID final como label público.
 
-## RX pós-mudança informado
+## Interpretação correta da API MediaMTX
 
-- Nginx: `active`
-- BIND: `active`
-- MediaMTX: `inactive`
-- FFmpeg ativos: `0`
-- MediaMTX paths runtime: `0`
-- porta 443: `0` no resumo
+No runtime atual, `/v3/paths/list` materializa os nove paths configurados mesmo sem publisher. Portanto a métrica correta é:
 
-O coletor imprimiu `NS3`; isto é erro de rótulo. A função do nó é NS1.
+- `CONFIGURED_PATHS=9`
+- `READY_PATHS=0`
+- `ONLINE_PATHS=0`
 
-## Decisão
+Não usar a expressão `0 paths` para este estado.
+
+## Decisão operacional
 
 - Não copiar a árvore legada inteira de volta.
-- Não reintroduzir nomes `*-main`, `-32`, `-64`, `-clean` ou autoridades antigas.
-- Preservar qualquer diretório antigo encontrado em backup antes de removê-lo da autoridade.
+- Não executar novamente o SCRIPT 02B.
+- Não executar o Script 03 destrutivo com `rm -rf /srv/tpsmedia/repository/channels/*`.
+- Não executar Foundation v2.0.0 nem v2.1.0.
+- Preservar qualquer diretório antigo antes de retirá-lo da autoridade.
 - CAS permanece parte da arquitetura desde a fundação.
+- Próxima migração deve usar hot reload do MediaMTX, sem novo restart, exigindo PID e `NRestarts` invariantes.
 
 ## Próxima autoridade executável
 
-`TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.sh`
+`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.sh`
 
-A versão v2.0.0 está superseded e não deve ser usada para nova execução.
+PASS esperado: `RESULT=PASS_FOUNDATION_R00_R07_V2_2`.
