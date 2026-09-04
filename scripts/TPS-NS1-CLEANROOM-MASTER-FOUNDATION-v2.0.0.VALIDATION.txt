@@ -1,0 +1,30 @@
+PROGRAM=TPS-NS1-CLEANROOM-MASTER-FOUNDATION
+VERSION=2.0.0
+SHA256=9be527bc003797d10441e9ad79f9bd95a0db69992452c8bfa8f8b4a9a253676a
+
+VALIDATION_PERFORMED
+BASH_N=PASS
+PYYAML_BUILD_ENV=PASS
+STATIC_SCAN_RM_RF=PASS
+STATIC_SCAN_SYSTEMCTL_RESTART=PASS
+STATIC_SCAN_REBOOT_SHUTDOWN=PASS
+STATIC_SCAN_PACKAGE_INSTALL=PASS
+STATIC_SCAN_FIREWALL_MUTATION=PASS
+
+DESIGN_TESTS
+- Exact GCP/hostname admission gate.
+- Existing legacy isolation is mandatory.
+- FFmpeg must be zero before foundation mutation.
+- Nginx and BIND syntax and active-state gates before mutation.
+- Config backup before clean MediaMTX apply.
+- Canonical repository is CAS-ready and contains exactly nine channel IDs.
+- MediaMTX candidate is parsed by PyYAML and checked for exactly nine paths.
+- Candidate uses overridePublisher=false.
+- Candidate is launched with the real MediaMTX binary on isolated LAB ports.
+- LAB performs a synthetic RTMP audio publish and requires HLS manifest generation.
+- Production MediaMTX is started only when previously inactive; if active, config change uses hot reload and PID must not change.
+- Rollback restores previous MediaMTX configuration and previous active/inactive state.
+- Nginx and BIND are not restarted or reconfigured in this runner.
+
+SHELLCHECK=UNAVAILABLE_IN_BUILD_ENVIRONMENT
+Production admission requires ShellCheck on NS1 when installed; the script self-runs ShellCheck before mutation when available.
