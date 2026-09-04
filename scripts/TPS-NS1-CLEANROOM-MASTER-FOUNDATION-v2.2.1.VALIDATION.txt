@@ -1,0 +1,49 @@
+PROGRAM=TPS-NS1-CLEANROOM-MASTER-FOUNDATION
+VERSION=2.2.1
+SHA256=d3db444c4aa6d701d6e2f0feea839778b131583df5431370fe8f30aa6e858ea3
+
+RUNTIME_FAILURE_ANALYZED
+- v2.2.0 reached R03 LAB and failed before any production mutation.
+- Exact runtime error: ERR: open .../mediamtx.final.yml: permission denied
+- Root cause: WORK was created by root under umask 027 and candidate YAML inherited root-only group access, while LAB executes MediaMTX as tpsmedia.
+- At failure point MUTATED_MTX=0 and MUTATED_REPO=0, therefore production MediaMTX config, repository names, Nginx and BIND were not changed by v2.2.0.
+
+FIXES_V2_2_1
+1. Resolve actual primary group of tpsmedia with id -gn.
+2. Make WORK root:<tpsmedia-primary-group> mode 0750.
+3. Make candidate YAML root:<tpsmedia-primary-group> mode 0640.
+4. Before LAB, prove via runuser -u tpsmedia that WORK is traversable and candidate readable.
+5. Add timeout command admission and bound ffprobe HLS decode to 15 seconds.
+6. Strengthen repository rollback: track final channel directories created by this run and remove only empty known directories on rollback; preserve any non-empty directory instead of deleting data.
+7. Back up existing channels.json and restore/remove the runner-created catalog on rollback.
+8. Preserve all v2.2 safeguards: exact path-set admission, all-idle gate, isolated LAB, RTMP/HLS/bytes/decode, hot reload only, PID/NRestarts invariants, Nginx/BIND invariants.
+
+VALIDATION_PERFORMED_IN_BUILD_ENVIRONMENT
+BASH_N=PASS
+PERMISSION_MODEL_RUNUSER_TEST=PASS
+STATIC_SCAN_RM_RF=PASS
+STATIC_SCAN_SYSTEMCTL_RESTART=PASS
+STATIC_SCAN_APT_INSTALL=PASS
+STATIC_SCAN_APT_REMOVE=PASS
+STATIC_SCAN_UFW_MUTATION=PASS
+STATIC_SCAN_IPTABLES_MUTATION=PASS
+STATIC_SCAN_NFT_MUTATION=PASS
+
+PERMISSION_MODEL_TEST
+- Created a root-owned directory with service-group traversal mode 0750.
+- Created a root-owned candidate file with service-group read mode 0640.
+- Verified with runuser under an unprivileged service account that directory traversal, file readability and cat access all PASS.
+
+ROLLBACK_MODEL_REVIEW
+- Failure before R04: no production mutation.
+- Failure after repository retirement: deprecated directories restored.
+- Failure after MediaMTX hot reload: previous mediamtx.yml restored and original path set re-validated.
+- Failure after final repository creation: only directories created by this runner are removed if empty; non-empty data is preserved and reported.
+- channels.json prior version is restored when present; runner-created catalog is removed when no prior catalog existed.
+
+SHELLCHECK_BUILD_ENVIRONMENT=UNAVAILABLE
+- Target runner self-requires ShellCheck and aborts before mutation if ShellCheck fails or is absent.
+- Operator previously proved v2.2.0 SHELLCHECK=PASS; v2.2.1 modifications are permission/rollback/timeout hardening and will be rechecked on NS1 before execution.
+
+EXPECTED_RUNTIME
+RESULT=PASS_FOUNDATION_R00_R07_V2_2_1
