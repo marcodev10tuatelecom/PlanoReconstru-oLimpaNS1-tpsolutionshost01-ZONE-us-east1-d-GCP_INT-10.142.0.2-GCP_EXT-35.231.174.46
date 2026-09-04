@@ -1,0 +1,43 @@
+PROGRAM=TPS-NS1-CLEANROOM-MASTER-FOUNDATION
+VERSION=2.1.0
+SHA256=3522108e8661071b431c0fc77dd166f88ea227221d13d4d868a37fb59b1a16c1
+
+CANONICAL_NAMING
+INTERNAL_CHANNELS=radioprincipal,radiopop,radiorock,radioclassicas,radiocountry,tvkids,tvteens,tvviva,tvmaisjovem
+COMPANY_DOMAIN=tpsolutions.com.br
+MEDIA_DOMAIN=studiosatweb.com.br
+PUBLIC_MAPPING=radioprincipal->radio.studiosatweb.com.br;radiopop->radiopop.studiosatweb.com.br;radiorock->radiorock.studiosatweb.com.br;radioclassicas->radioclassicas.studiosatweb.com.br;radiocountry->radiocountry.studiosatweb.com.br;tvkids->tvkids.studiosatweb.com.br;tvteens->tvteens.studiosatweb.com.br;tvviva->tvviva.studiosatweb.com.br;tvmaisjovem->tvmaisjovem.studiosatweb.com.br
+
+VALIDATION_PERFORMED
+BASH_N=PASS
+PYYAML_BUILD_ENV=PASS
+MEDIAMTX_CANDIDATE_YAML_PARSE=PASS
+EXACT_9_CANONICAL_PATHS=PASS
+OVERRIDE_PUBLISHER_FALSE=PASS
+DEPRECATED_CHANNEL_PRESERVATION_MOCK=PASS
+FINAL_CHANNEL_SET_MOCK=PASS
+STATIC_SCAN_RM_RF_IN_RUNNER=PASS
+STATIC_SCAN_SYSTEMCTL_RESTART=PASS
+STATIC_SCAN_PACKAGE_MUTATION=PASS
+STATIC_SCAN_FIREWALL_MUTATION=PASS
+STATIC_SCAN_CERTBOT_MUTATION=PASS
+
+DESIGN_GATES
+- Exact GCP resource/hostname/private/public IP admission gate.
+- Requires at least one previously isolated /srv/tpsmedia-legacy-* tree.
+- Requires zero FFmpeg before foundation mutation.
+- Nginx and BIND must be active and syntactically valid before mutation.
+- Existing MediaMTX config and TPS/systemd configuration are backed up before apply.
+- Deprecated channel directories are moved intact into the run backup, never deleted.
+- CAS repository remains enabled from foundation.
+- channels.json schema=2 stores channel ID, media type and public StudioSat FQDN.
+- Exactly nine no--main MediaMTX paths; no all_others.
+- Candidate is tested with real MediaMTX binary on isolated LAB ports on NS1.
+- LAB publishes synthetic RTMP to radiopop and requires API + metrics + HLS.
+- MediaMTX is started only if inactive; if already active, normal path relies on hot reload and forbids PID change.
+- Nginx/BIND are never restarted or reconfigured in this runner.
+- Rollback restores previous MediaMTX config and previous inactive state when required.
+
+SHELLCHECK=UNAVAILABLE_IN_BUILD_ENVIRONMENT
+RUNTIME_MEDIAMTX_BINARY_TEST=DEFERRED_TO_NS1_SELF_GATE
+Production admission requires ShellCheck on NS1; the runner fails closed when ShellCheck is absent or reports warnings/errors.
