@@ -1,4 +1,4 @@
-# Plano de Reconstrução Limpa e Completa – NS1
+# Plano de Reconstrução Limpa e Completa — NS1
 
 **Cloud resource:** `tpsolutionshost01`  
 **Função TPS:** `NS1`  
@@ -10,9 +10,35 @@
 
 ## Decisão arquitetural
 
-**Não remendar. Reconstruir in-place preservando a VM GCP.** A árvore histórica `/srv/tpsmedia` já foi isolada sob `/srv/tpsmedia-legacy-*`; o legado passa a ser fonte forense, não autoridade operacional.
+**Não remendar. Reconstruir in-place preservando a VM GCP.** A árvore histórica `/srv/tpsmedia` foi isolada sob `/srv/tpsmedia-legacy-*`; o legado é fonte forense, não autoridade operacional.
 
-## Estado pós-mudança confirmado pelo operador
+## Fronteira de domínios
+
+- Infraestrutura / hosting / servidores: `tpsolutions.com.br`
+- Emissoras de rádio e TV: `studiosatweb.com.br`
+- Este servidor: `ns1.tpsolutions.com.br`
+
+A nomenclatura definitiva está em [`CANONICAL-NAMING.md`](CANONICAL-NAMING.md).
+
+## 9 IDs canônicos definitivos
+
+`radioprincipal`, `radiopop`, `radiorock`, `radioclassicas`, `radiocountry`, `tvkids`, `tvteens`, `tvviva`, `tvmaisjovem`.
+
+Não criar novamente `-main`, `-32`, `-64`, `-clean`, `-old`, `-new`, `tv2-*`, `tv-crista-*`, `tv-jovem-*` ou `radiotv-main` como autoridade.
+
+Mapeamento público:
+
+- `radioprincipal` → `radio.studiosatweb.com.br`
+- `radiopop` → `radiopop.studiosatweb.com.br`
+- `radiorock` → `radiorock.studiosatweb.com.br`
+- `radioclassicas` → `radioclassicas.studiosatweb.com.br`
+- `radiocountry` → `radiocountry.studiosatweb.com.br`
+- `tvkids` → `tvkids.studiosatweb.com.br`
+- `tvteens` → `tvteens.studiosatweb.com.br`
+- `tvviva` → `tvviva.studiosatweb.com.br`
+- `tvmaisjovem` → `tvmaisjovem.studiosatweb.com.br`
+
+## Estado pós-clean-room informado pelo operador
 
 | Camada | Estado |
 |---|---|
@@ -26,42 +52,42 @@
 | `/srv/tpsmedia` | nova árvore clean-room |
 | `/srv/tpsmedia-legacy-*` | legado preservado |
 
-O coletor usado após a mudança imprimiu `NS3`; esse rótulo é incorreto para este projeto. Esta máquina é o **NS1 clean-room**.
+O coletor que imprimiu `NS3` está incorreto para este projeto. Esta máquina é o **NS1 clean-room**.
 
-## Execução v2
+## Autoridade operacional atual
 
-A reconstrução passa a ser **state-driven**: cada runner analisa, executa todas as mudanças locais determinísticas, valida e faz rollback quando necessário. Não haverá parada entre microetapas quando o estado puder ser comprovado automaticamente.
+### Foundation v2.1.0 — executar esta versão
 
-### Trilha A — FOUNDATION R00–R07
+[`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.sh`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.sh)
 
-Arquivo: [`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.0.0.sh`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.0.0.sh)
+Esta versão substitui a v2.0.0 porque incorpora a nomenclatura definitiva sem `-main` e o domínio público correto `studiosatweb.com.br`.
 
-- identidade GCP/hostname fail-closed;
+A Foundation executa numa passagem state-driven:
+
+- admission gate de identidade GCP/hostname;
 - backup forense;
+- preservação de diretórios de canal antigos em backup, sem exclusão;
+- LAB real do MediaMTX em portas isoladas;
+- teste RTMP sintético + API + metrics + HLS;
 - contas técnicas e ownership;
-- repositório CAS-ready + 9 canais;
-- MediaMTX limpo com exatamente 9 paths;
-- teste real do binário em portas LAB;
-- publish sintético + HLS no LAB;
-- start do MediaMTX se inativo, ou hot reload se já ativo;
-- Nginx/BIND preservados e validados;
-- classificação automática dos bloqueios externos.
+- CAS + nove pastas canônicas definitivas;
+- `channels.json` com FQDN público de cada emissora;
+- MediaMTX com exatamente nove paths definitivos;
+- start se estiver inativo ou hot reload se já estiver ativo;
+- validação de Nginx/BIND sem reconfigurá-los;
+- classificação automática dos bloqueios seguintes.
 
-### Próximas trilhas
+Validação: [`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.VALIDATION.txt`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.VALIDATION.txt).
 
-1. **MEDIA DATA PLANE** — conteúdo → SHA-256/ffprobe → CAS/refs/catalog → playout persistente → NORMAL/LIVE/EMERGENCY.
-2. **PUBLIC EDGE** — Nginx/HLS → TLS/443 → sites das emissoras.
-3. **DNS/NS2/DNSSEC** — NS2 real, AXFR/IXFR/NOTIFY, TSIG, DNSKEY/DS parental.
+## Próximas trilhas
+
+1. **MEDIA DATA PLANE** — conteúdo → SHA-256/ffprobe → CAS/refs/catalog → normalização → playout → NORMAL/LIVE/EMERGENCY.
+2. **PUBLIC EDGE** — Nginx/HLS → sites → TLS/443 usando `*.studiosatweb.com.br`.
+3. **DNS/NS2/DNSSEC** — NS1/NS2, AXFR/IXFR/NOTIFY, TSIG, DNSKEY/DS e delegação.
 4. **OBSERVABILIDADE/ACEITE** — métricas, alertas, AS-BUILT e DROP comprovado do legado.
 
-Detalhes: [`CLEANROOM-V2-MASTER.md`](CLEANROOM-V2-MASTER.md) e [`STATE-20260904-CLEANROOM.md`](STATE-20260904-CLEANROOM.md).
-
-## 9 IDs canônicos
-
-`radio-main`, `radio-pop`, `radio-rock`, `radio-classicas`, `radio-country`, `tvkids-main`, `tvteens-main`, `tvviva-main`, `tvmaisjovem-main`.
-
-Não criar `-32`, `-64`, `-clean`, `-old`, `-new`, `tv2-*`, `tv-crista-*` ou `tv-jovem-*`.
+Detalhes: [`CLEANROOM-V2-MASTER.md`](CLEANROOM-V2-MASTER.md), [`STATE-20260904-CLEANROOM.md`](STATE-20260904-CLEANROOM.md) e [`EXECUTION-INDEX.md`](EXECUTION-INDEX.md).
 
 ## Documentação histórica
 
-Os documentos `00-PRINCIPIOS.md` a `10-FASE-9-ACEITE.md` e `ARQUITETURA-ALVO.md` ficam preservados como **Plano v1**. Quando houver divergência, o **Clean-Room v2** é a autoridade operacional.
+Os documentos `00-PRINCIPIOS.md` a `10-FASE-9-ACEITE.md`, `ARQUITETURA-ALVO.md` e o runner Foundation v2.0.0 são preservados como histórico. Quando houver divergência, **Clean-Room v2.1 + CANONICAL-NAMING.md** são a autoridade operacional.
