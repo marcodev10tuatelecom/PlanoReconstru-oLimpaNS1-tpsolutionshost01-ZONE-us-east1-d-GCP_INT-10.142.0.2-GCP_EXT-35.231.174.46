@@ -38,7 +38,9 @@ Mapeamento público:
 
 Não criar novamente `-main`, `-32`, `-64`, `-clean`, `-old`, `-new`, `tv2-*`, `tv-crista-*`, `tv-jovem-*` ou `radiotv-main` como autoridade.
 
-## Estado real pós-SCRIPT-02B
+## Estado real atual
+
+Após o SCRIPT 02B e a tentativa Foundation v2.2.0:
 
 | Camada | Estado |
 |---|---|
@@ -46,45 +48,59 @@ Não criar novamente `-main`, `-32`, `-64`, `-clean`, `-old`, `-new`, `tv2-*`, `
 | Nginx | `active` |
 | BIND | `active` |
 | MediaMTX | `active` |
+| MediaMTX PID observado | `36164` |
+| MediaMTX `NRestarts` | `0` |
 | RTMP 1935 | listening |
 | HLS 8888 | listening |
 | API 9997 | listening |
 | FFmpeg | `0` |
-| Paths configurados | `9` |
+| Paths configurados | `9` legados |
 | Paths READY | `0` |
 | Paths ONLINE | `0` |
 | Publishers/readers | `0` |
 | HTTPS/443 | ainda não certificado |
 
-Os 9 paths atualmente materializados pela API são os nomes legados do SCRIPT 02B: `radio-main`, `radio-pop`, `radio-rock`, `radio-classicas`, `radio-country`, `tvkids-main`, `tvteens-main`, `tvviva-main`, `tvmaisjovem-main`. Eles são estado transitório, não nomenclatura final.
+Os 9 paths materializados continuam sendo `radio-main`, `radio-pop`, `radio-rock`, `radio-classicas`, `radio-country`, `tvkids-main`, `tvteens-main`, `tvviva-main`, `tvmaisjovem-main`. Eles são estado transitório, não nomenclatura final.
+
+## Foundation v2.2.0 — falha segura registrada
+
+A v2.2.0 passou admission, backup e contrato estático, mas falhou no LAB isolado em R03:
+
+`ERR: open /var/tmp/.../mediamtx.final.yml: permission denied`
+
+Causa raiz: o LAB executa MediaMTX como `tpsmedia`, mas o diretório de trabalho/candidato foi criado por `root` sob `umask 027` sem traversal/read para o usuário de serviço.
+
+A falha ocorreu **antes** de R04/R05; portanto não houve retirada dos diretórios legados nem substituição do `mediamtx.yml` de produção. O estado pós-SCRIPT-02B foi preservado.
 
 ## Autoridade operacional atual
 
-### Foundation v2.2.0 — única versão liberada
+### Foundation v2.2.1 — única versão liberada
 
-[`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.sh`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.sh)
+[`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.1.sh`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.1.sh)
 
 SHA-256:
 
-`1520afb3a5df9919c3fcac20be6fa882e68a9790d7ca8f822b114e98df65eb08`
+`d3db444c4aa6d701d6e2f0feea839778b131583df5431370fe8f30aa6e858ea3`
 
-A v2.2 foi criada especificamente para o estado pós-SCRIPT-02B. Ela:
+Validação:
 
-- admite somente o conjunto exato de 9 paths legados ou os 9 finais;
-- exige todos os paths ociosos e FFmpeg zero;
-- faz backup forense antes da mutação;
-- executa LAB real com MediaMTX em portas isoladas;
-- exige 9 nomes finais, RTMP `radiopop` READY, bytes > 0, HLS e decode via ffprobe;
+[`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.1.VALIDATION.txt`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.1.VALIDATION.txt)
+
+A v2.2.1:
+
+- mantém o admission gate exato do estado pós-SCRIPT-02B;
+- corrige traversal/read do LAB para `tpsmedia`;
+- prova permissões com `runuser` antes de iniciar o MediaMTX LAB;
+- executa LAB real com 9 nomes finais, RTMP, bytes, HLS e decode via ffprobe;
+- adiciona timeout ao decode HLS;
 - preserva diretórios legados antes de retirá-los da autoridade;
-- migra MediaMTX por hot reload, sem `systemctl restart` no caminho normal;
+- migra MediaMTX por hot reload, sem restart no caminho normal;
 - exige PID e `NRestarts` invariantes;
-- implementa rollback de configuração MediaMTX e diretórios retirados;
+- fortalece rollback do catálogo e dos diretórios finais criados;
 - cria CAS e exatamente os 9 diretórios finais;
 - mantém Nginx e BIND invariantes.
 
-Validação: [`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.VALIDATION.txt`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.VALIDATION.txt).
-
-**v2.0.0 e v2.1.0 estão SUPERSEDED e não devem ser executadas.** Não executar novamente o SCRIPT 02B nem o Script 03 destrutivo com `rm -rf` de canais.
+**v2.0.0, v2.1.0 e v2.2.0 estão SUPERSEDED e não devem ser executadas novamente.** Não repetir SCRIPT 02B nem usar Script 03 destrutivo com `rm -rf` de canais.
 
 ## Próximas trilhas
 
@@ -94,7 +110,3 @@ Validação: [`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.VALIDATION.txt
 4. **OBSERVABILIDADE/ACEITE** — métricas, alertas, AS-BUILT e DROP comprovado do legado.
 
 Detalhes: [`CLEANROOM-V2-MASTER.md`](CLEANROOM-V2-MASTER.md), [`STATE-20260904-CLEANROOM.md`](STATE-20260904-CLEANROOM.md), [`EXECUTION-INDEX.md`](EXECUTION-INDEX.md) e [`CANONICAL-NAMING.md`](CANONICAL-NAMING.md).
-
-## Documentação histórica
-
-Os documentos antigos e runners v2.0/v2.1 permanecem apenas como histórico. Quando houver divergência, **Foundation v2.2 + CANONICAL-NAMING.md + STATE-20260904-CLEANROOM.md** são a autoridade operacional.
