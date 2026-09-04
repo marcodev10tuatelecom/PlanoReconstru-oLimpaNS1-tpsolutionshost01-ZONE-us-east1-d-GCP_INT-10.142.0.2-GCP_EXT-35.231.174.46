@@ -16,7 +16,7 @@
 - O SCRIPT 02B reescreveu a configuração do MediaMTX e executou `systemctl restart tps-mediamtx`.
 - Após o SCRIPT 02B, o MediaMTX ficou `active` e as portas RTMP/HLS/API ficaram em escuta.
 
-## Estado exato pós-SCRIPT-02B
+## Estado exato pós-SCRIPT-02B preservado após falha do v2.2.0
 
 - Nginx: `active`
 - BIND: `active`
@@ -31,6 +31,8 @@
 - Publishers/source: `0`
 - Readers: `0`
 - Bytes recebidos/enviados: `0`
+- MediaMTX PID observado antes do v2.2.0: `36164`
+- MediaMTX `NRestarts`: `0`
 - HTTPS/443: ainda não certificado neste estado
 
 ### Nomes transitórios ainda presentes no MediaMTX
@@ -38,6 +40,22 @@
 `radio-main`, `radio-pop`, `radio-rock`, `radio-classicas`, `radio-country`, `tvkids-main`, `tvteens-main`, `tvviva-main`, `tvmaisjovem-main`.
 
 Esses nomes são **estado legado transitório introduzido pelo SCRIPT 02B**, não autoridade final.
+
+## Execução Foundation v2.2.0 — FAIL SAFE em R03
+
+A v2.2.0 passou admission, backup e validação estática, mas falhou no LAB isolado antes de qualquer mutação de produção.
+
+Erro primário:
+
+`ERR: open /var/tmp/.../mediamtx.final.yml: permission denied`
+
+Erro final do gate:
+
+`FATAL=LAB_FINAL_PATH_SET_FAIL`
+
+Causa raiz: o diretório `WORK` e o candidato YAML foram criados por `root` sob `umask 027`, enquanto o LAB executa o MediaMTX com `runuser -u tpsmedia`. O usuário de serviço não conseguia atravessar/ler o candidato.
+
+No ponto da falha, R04/R05 ainda não haviam sido alcançados; portanto os diretórios legados não foram retirados da autoridade e o `mediamtx.yml` de produção não foi substituído. A falha é classificada como **SAFE PRE-MUTATION FAIL**.
 
 ## Nomenclatura definitiva
 
@@ -67,13 +85,19 @@ Não usar a expressão `0 paths` para este estado.
 - Não copiar a árvore legada inteira de volta.
 - Não executar novamente o SCRIPT 02B.
 - Não executar o Script 03 destrutivo com `rm -rf /srv/tpsmedia/repository/channels/*`.
-- Não executar Foundation v2.0.0 nem v2.1.0.
+- Não executar Foundation v2.0.0, v2.1.0 ou v2.2.0.
 - Preservar qualquer diretório antigo antes de retirá-lo da autoridade.
 - CAS permanece parte da arquitetura desde a fundação.
-- Próxima migração deve usar hot reload do MediaMTX, sem novo restart, exigindo PID e `NRestarts` invariantes.
+- Próxima migração usa hot reload do MediaMTX, sem novo restart, exigindo PID e `NRestarts` invariantes.
 
 ## Próxima autoridade executável
 
-`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.sh`
+`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.1.sh`
 
-PASS esperado: `RESULT=PASS_FOUNDATION_R00_R07_V2_2`.
+SHA-256 esperado:
+
+`d3db444c4aa6d701d6e2f0feea839778b131583df5431370fe8f30aa6e858ea3`
+
+PASS esperado:
+
+`RESULT=PASS_FOUNDATION_R00_R07_V2_2_1`.
