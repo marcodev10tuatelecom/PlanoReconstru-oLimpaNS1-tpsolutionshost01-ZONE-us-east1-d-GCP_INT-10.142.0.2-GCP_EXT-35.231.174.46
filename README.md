@@ -6,11 +6,11 @@
 **Zona:** `us-east1-d`  
 **IP Interno:** `10.142.0.2`  
 **IP Externo:** `35.231.174.46`  
-**Data-base:** 2026-09-04  
+**Data-base:** 2026-09-04
 
 ## Decisão arquitetural
 
-**Não remendar. Reconstruir in-place preservando a VM GCP.** A árvore histórica `/srv/tpsmedia` foi isolada sob `/srv/tpsmedia-legacy-*`; o legado é fonte forense, não autoridade operacional.
+**Não remendar. Reconstruir in-place preservando a VM GCP.** O legado permanece fonte forense; a nova `/srv/tpsmedia` é a autoridade clean-room.
 
 ## Fronteira de domínios
 
@@ -24,8 +24,6 @@ A nomenclatura definitiva está em [`CANONICAL-NAMING.md`](CANONICAL-NAMING.md).
 
 `radioprincipal`, `radiopop`, `radiorock`, `radioclassicas`, `radiocountry`, `tvkids`, `tvteens`, `tvviva`, `tvmaisjovem`.
 
-Não criar novamente `-main`, `-32`, `-64`, `-clean`, `-old`, `-new`, `tv2-*`, `tv-crista-*`, `tv-jovem-*` ou `radiotv-main` como autoridade.
-
 Mapeamento público:
 
 - `radioprincipal` → `radio.studiosatweb.com.br`
@@ -38,56 +36,65 @@ Mapeamento público:
 - `tvviva` → `tvviva.studiosatweb.com.br`
 - `tvmaisjovem` → `tvmaisjovem.studiosatweb.com.br`
 
-## Estado pós-clean-room informado pelo operador
+Não criar novamente `-main`, `-32`, `-64`, `-clean`, `-old`, `-new`, `tv2-*`, `tv-crista-*`, `tv-jovem-*` ou `radiotv-main` como autoridade.
+
+## Estado real pós-SCRIPT-02B
 
 | Camada | Estado |
 |---|---|
 | Hostname | `ns1.tpsolutions.com.br` |
 | Nginx | `active` |
 | BIND | `active` |
-| MediaMTX | `inactive` no último RX pós-mudança |
+| MediaMTX | `active` |
+| RTMP 1935 | listening |
+| HLS 8888 | listening |
+| API 9997 | listening |
 | FFmpeg | `0` |
-| Paths MediaMTX runtime | `0` |
-| HTTPS/443 | ausente/não comprovado no último resumo |
-| `/srv/tpsmedia` | nova árvore clean-room |
-| `/srv/tpsmedia-legacy-*` | legado preservado |
+| Paths configurados | `9` |
+| Paths READY | `0` |
+| Paths ONLINE | `0` |
+| Publishers/readers | `0` |
+| HTTPS/443 | ainda não certificado |
 
-O coletor que imprimiu `NS3` está incorreto para este projeto. Esta máquina é o **NS1 clean-room**.
+Os 9 paths atualmente materializados pela API são os nomes legados do SCRIPT 02B: `radio-main`, `radio-pop`, `radio-rock`, `radio-classicas`, `radio-country`, `tvkids-main`, `tvteens-main`, `tvviva-main`, `tvmaisjovem-main`. Eles são estado transitório, não nomenclatura final.
 
 ## Autoridade operacional atual
 
-### Foundation v2.1.0 — executar esta versão
+### Foundation v2.2.0 — única versão liberada
 
-[`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.sh`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.sh)
+[`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.sh`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.sh)
 
-Esta versão substitui a v2.0.0 porque incorpora a nomenclatura definitiva sem `-main` e o domínio público correto `studiosatweb.com.br`.
+SHA-256:
 
-A Foundation executa numa passagem state-driven:
+`1520afb3a5df9919c3fcac20be6fa882e68a9790d7ca8f822b114e98df65eb08`
 
-- admission gate de identidade GCP/hostname;
-- backup forense;
-- preservação de diretórios de canal antigos em backup, sem exclusão;
-- LAB real do MediaMTX em portas isoladas;
-- teste RTMP sintético + API + metrics + HLS;
-- contas técnicas e ownership;
-- CAS + nove pastas canônicas definitivas;
-- `channels.json` com FQDN público de cada emissora;
-- MediaMTX com exatamente nove paths definitivos;
-- start se estiver inativo ou hot reload se já estiver ativo;
-- validação de Nginx/BIND sem reconfigurá-los;
-- classificação automática dos bloqueios seguintes.
+A v2.2 foi criada especificamente para o estado pós-SCRIPT-02B. Ela:
 
-Validação: [`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.VALIDATION.txt`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.1.0.VALIDATION.txt).
+- admite somente o conjunto exato de 9 paths legados ou os 9 finais;
+- exige todos os paths ociosos e FFmpeg zero;
+- faz backup forense antes da mutação;
+- executa LAB real com MediaMTX em portas isoladas;
+- exige 9 nomes finais, RTMP `radiopop` READY, bytes > 0, HLS e decode via ffprobe;
+- preserva diretórios legados antes de retirá-los da autoridade;
+- migra MediaMTX por hot reload, sem `systemctl restart` no caminho normal;
+- exige PID e `NRestarts` invariantes;
+- implementa rollback de configuração MediaMTX e diretórios retirados;
+- cria CAS e exatamente os 9 diretórios finais;
+- mantém Nginx e BIND invariantes.
+
+Validação: [`scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.VALIDATION.txt`](scripts/TPS-NS1-CLEANROOM-MASTER-FOUNDATION-v2.2.0.VALIDATION.txt).
+
+**v2.0.0 e v2.1.0 estão SUPERSEDED e não devem ser executadas.** Não executar novamente o SCRIPT 02B nem o Script 03 destrutivo com `rm -rf` de canais.
 
 ## Próximas trilhas
 
-1. **MEDIA DATA PLANE** — conteúdo → SHA-256/ffprobe → CAS/refs/catalog → normalização → playout → NORMAL/LIVE/EMERGENCY.
-2. **PUBLIC EDGE** — Nginx/HLS → sites → TLS/443 usando `*.studiosatweb.com.br`.
+1. **MEDIA DATA PLANE** — localizar fonte de conteúdo autoritativa → ffprobe/SHA-256 → CAS/refs/catalog → normalização → playout → NORMAL/LIVE/EMERGENCY.
+2. **PUBLIC EDGE** — Nginx/HLS → sites → TLS/443 em `studiosatweb.com.br`.
 3. **DNS/NS2/DNSSEC** — NS1/NS2, AXFR/IXFR/NOTIFY, TSIG, DNSKEY/DS e delegação.
 4. **OBSERVABILIDADE/ACEITE** — métricas, alertas, AS-BUILT e DROP comprovado do legado.
 
-Detalhes: [`CLEANROOM-V2-MASTER.md`](CLEANROOM-V2-MASTER.md), [`STATE-20260904-CLEANROOM.md`](STATE-20260904-CLEANROOM.md) e [`EXECUTION-INDEX.md`](EXECUTION-INDEX.md).
+Detalhes: [`CLEANROOM-V2-MASTER.md`](CLEANROOM-V2-MASTER.md), [`STATE-20260904-CLEANROOM.md`](STATE-20260904-CLEANROOM.md), [`EXECUTION-INDEX.md`](EXECUTION-INDEX.md) e [`CANONICAL-NAMING.md`](CANONICAL-NAMING.md).
 
 ## Documentação histórica
 
-Os documentos `00-PRINCIPIOS.md` a `10-FASE-9-ACEITE.md`, `ARQUITETURA-ALVO.md` e o runner Foundation v2.0.0 são preservados como histórico. Quando houver divergência, **Clean-Room v2.1 + CANONICAL-NAMING.md** são a autoridade operacional.
+Os documentos antigos e runners v2.0/v2.1 permanecem apenas como histórico. Quando houver divergência, **Foundation v2.2 + CANONICAL-NAMING.md + STATE-20260904-CLEANROOM.md** são a autoridade operacional.
